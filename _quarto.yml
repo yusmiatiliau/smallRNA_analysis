@@ -8,7 +8,7 @@ website:
     style: docked
     contents:
       - text: "Portfolio"
-        href: smallRNA_analysis_script.qmd
+        href: index.qmd
      
   navbar:
     right:

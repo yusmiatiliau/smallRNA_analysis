@@ -4,20 +4,29 @@
     "href": "index.html",
     "title": "smallRNA_analysis",
     "section": "",
-    "text": "This document records the tools and scripts I used for the small RNA analysis"
+    "text": "This document records the tools and scripts I used for the small RNA analysis",
+    "crumbs": [
+      "Portfolio"
+    ]
   },
   {
     "objectID": "index.html#scripts-for-small-rna-processing-analysis",
     "href": "index.html#scripts-for-small-rna-processing-analysis",
     "title": "smallRNA_analysis",
     "section": "",
-    "text": "This document records the tools and scripts I used for the small RNA analysis"
+    "text": "This document records the tools and scripts I used for the small RNA analysis",
+    "crumbs": [
+      "Portfolio"
+    ]
   },
   {
     "objectID": "index.html#processing",
     "href": "index.html#processing",
     "title": "smallRNA_analysis",
     "section": "Processing",
-    "text": "Processing\nBefore the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc."
+    "text": "Processing\nBefore the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.",
+    "crumbs": [
+      "Portfolio"
+    ]
   }
 ]
