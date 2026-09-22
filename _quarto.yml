@@ -7,7 +7,7 @@ website:
   sidebar:
     style: docked
     contents:
-      - text: "Portfolio"
+      - text: "SmallRNA analysis"
         href: index.qmd
      
   navbar:

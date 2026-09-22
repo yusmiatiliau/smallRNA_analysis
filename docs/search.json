@@ -6,7 +6,7 @@
     "section": "",
     "text": "This document records the tools and scripts I used for the small RNA analysis",
     "crumbs": [
-      "Portfolio"
+      "SmallRNA analysis"
     ]
   },
   {
@@ -16,7 +16,7 @@
     "section": "",
     "text": "This document records the tools and scripts I used for the small RNA analysis",
     "crumbs": [
-      "Portfolio"
+      "SmallRNA analysis"
     ]
   },
   {
@@ -26,7 +26,7 @@
     "section": "Processing",
     "text": "Processing\nBefore the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.",
     "crumbs": [
-      "Portfolio"
+      "SmallRNA analysis"
     ]
   }
 ]
