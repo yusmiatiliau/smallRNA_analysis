@@ -1,0 +1,26 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Small RNA analysis"
+  sidebar:
+    style: docked
+    contents:
+      - text: "Portfolio"
+        href: smallRNA_analysis_script.qmd
+     
+  navbar:
+    right:
+      - icon: github
+        href: https://github.com/
+        aria-label: Github
+  page-footer:
+    center:
+      - text: "Made with love and Quarto"
+        href: https://quarto.org
+format:
+  html:
+    css: style.css
+    toc: true
+    

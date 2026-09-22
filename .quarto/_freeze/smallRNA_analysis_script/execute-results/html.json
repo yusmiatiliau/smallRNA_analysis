@@ -1,0 +1,15 @@
+{
+  "hash": "d7c38f1371760f8c67f6b13b748d1cd1",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"smallRNA_analysis\"\nformat: html\neditor: visual\n---\n\n## Scripts for small RNA processing & analysis\n\nThis document records the tools and scripts I used for the small RNA analysis\n\n## Processing\n\nBefore the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.\n\n# Trimgalore\n\n```         \ntrim_galore \\\n--small_rna \\\n--length 17 \\\n--output_dir /DIR_output \\\n--fastqc_args \"--outdir /DIR_fastqc_output\" \\\n--cores 4 \\\n--gzip \\\n--2colour 20 \\\nfile.fq.gz\n```\n\nYou can add options to executable code like this\n\n\n::: {.cell}\n::: {.cell-output .cell-output-stdout}\n\n```\n[1] 4\n```\n\n\n:::\n:::\n\n\nThe `echo: false` option disables the printing of code (only output is displayed).\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

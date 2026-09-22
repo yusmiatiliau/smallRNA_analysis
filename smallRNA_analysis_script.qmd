@@ -1,0 +1,36 @@
+---
+title: "smallRNA_analysis"
+format: html
+editor: visual
+---
+
+## Scripts for small RNA processing & analysis
+
+This document records the tools and scripts I used for the small RNA analysis
+
+## Processing
+
+Before the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.
+
+# Trimgalore
+
+```         
+trim_galore \
+--small_rna \
+--length 17 \
+--output_dir /DIR_output \
+--fastqc_args "--outdir /DIR_fastqc_output" \
+--cores 4 \
+--gzip \
+--2colour 20 \
+file.fq.gz
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

@@ -1,0 +1,32 @@
+[
+  {
+    "objectID": "smallRNA_analysis_script.html",
+    "href": "smallRNA_analysis_script.html",
+    "title": "smallRNA_analysis",
+    "section": "",
+    "text": "This document records the tools and scripts I used for the small RNA analysis",
+    "crumbs": [
+      "Portfolio"
+    ]
+  },
+  {
+    "objectID": "smallRNA_analysis_script.html#scripts-for-small-rna-processing-analysis",
+    "href": "smallRNA_analysis_script.html#scripts-for-small-rna-processing-analysis",
+    "title": "smallRNA_analysis",
+    "section": "",
+    "text": "This document records the tools and scripts I used for the small RNA analysis",
+    "crumbs": [
+      "Portfolio"
+    ]
+  },
+  {
+    "objectID": "smallRNA_analysis_script.html#processing",
+    "href": "smallRNA_analysis_script.html#processing",
+    "title": "smallRNA_analysis",
+    "section": "Processing",
+    "text": "Processing\nBefore the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.",
+    "crumbs": [
+      "Portfolio"
+    ]
+  }
+]
