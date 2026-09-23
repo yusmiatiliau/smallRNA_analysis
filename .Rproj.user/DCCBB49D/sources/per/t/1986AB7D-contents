@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-## Scripts for small RNA processing & analysis
+# Scripts for small RNA processing & analysis
 
 This document records the tools and scripts I used for the small RNA analysis
 
@@ -12,9 +12,11 @@ This document records the tools and scripts I used for the small RNA analysis
 
 Before the analysis, we did a few processing and filtering steps to remove non-relevant components such as adaptors, rRNA, tRNA, reads in low complexity regions,etc.
 
-# Trimgalore
+### Trimgalore
 
-```         
+This is to remove adapters and filter reads based on quality and length. Here we removed any reads shorter than 17 bps, and phred quality lower than 20.
+
+``` bash
 trim_galore \
 --small_rna \
 --length 17 \
@@ -26,11 +28,22 @@ trim_galore \
 file.fq.gz
 ```
 
-You can add options to executable code like this
+### Prinseq
 
-```{r}
-#| echo: false
-2 * 2
+This is to remove low complexity reads. Output would be good.fq and bad.fq
+
+``` bash
+zcat trimmed.fq.gz | \
+prinseq-lite.pl \
+-lc_method dust \
+-lc_threshold 40 \
+-fastq stdin
 ```
+
+### Remove tRNA and rRNA
+
+For this, we first download the tRNA and rRNA sequences from Rfam database
+
+Rfam tRNA and rRNA
 
 The `echo: false` option disables the printing of code (only output is displayed).
