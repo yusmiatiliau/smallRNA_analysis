@@ -14,7 +14,7 @@ Before the analysis, we did a few processing and filtering steps to remove non-r
 
 # Trimgalore
 
-```         
+``` bash
 trim_galore \
 --small_rna \
 --length 17 \
