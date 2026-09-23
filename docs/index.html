@@ -23,6 +23,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -138,7 +173,13 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#scripts-for-small-rna-processing-analysis" id="toc-scripts-for-small-rna-processing-analysis" class="nav-link active" data-scroll-target="#scripts-for-small-rna-processing-analysis">Scripts for small RNA processing &amp; analysis</a></li>
   <li><a href="#processing" id="toc-processing" class="nav-link" data-scroll-target="#processing">Processing</a></li>
-  <li><a href="#trimgalore" id="toc-trimgalore" class="nav-link" data-scroll-target="#trimgalore">Trimgalore</a></li>
+  <li><a href="#trimgalore" id="toc-trimgalore" class="nav-link" data-scroll-target="#trimgalore">Trimgalore</a>
+  <ul class="collapse">
+  <li><a href="#prinseq" id="toc-prinseq" class="nav-link" data-scroll-target="#prinseq">Prinseq</a></li>
+  <li><a href="#remove-trna-and-rrna" id="toc-remove-trna-and-rrna" class="nav-link" data-scroll-target="#remove-trna-and-rrna">Remove tRNA and rRNA</a></li>
+  <li><a href="#remove-reads-from-chloroplast-genome" id="toc-remove-reads-from-chloroplast-genome" class="nav-link" data-scroll-target="#remove-reads-from-chloroplast-genome">Remove reads from chloroplast genome</a></li>
+  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis">Analysis</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -183,15 +224,99 @@ ul.task-list li input[type="checkbox"] {
 --gzip \
 --2colour 20 \
 file.fq.gz</code></pre>
-<p>You can add options to executable code like this</p>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4</code></pre>
-</div>
-</div>
-<p>The <code>echo: false</code> option disables the printing of code (only output is displayed).</p>
+<section id="prinseq" class="level3">
+<h3 class="anchored" data-anchor-id="prinseq">Prinseq</h3>
+<p>This is to remove low complexity reads. Output would be good.fq and bad.fq</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">zcat</span> trimmed.fq.gz <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">prinseq-lite.pl</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>-lc_method dust <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>-lc_threshold 40 <span class="dt">\</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>-fastq stdin</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="remove-trna-and-rrna" class="level3">
+<h3 class="anchored" data-anchor-id="remove-trna-and-rrna">Remove tRNA and rRNA</h3>
+<p>For this, we first download the tRNA and rRNA sequences from Rfam database using esl-sfetch</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> load DBD-mysql/4.055-GCC-15.2.0</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> load Infernal</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">perl</span> <span class="at">-MDBI</span> <span class="at">-MDBD::mysql</span>   <span class="at">-e</span> <span class="st">'print "DBI $DBI::VERSION; DBD::mysql $DBD::mysql::VERSION\n"'</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">esl-sfetch</span> <span class="at">-h</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">esl-sfetch</span> <span class="at">--index</span> /home/cenliau/00_nesi_projects/brins03581_nobackup/Cen/Rfam.fa</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Then use this perl script to extract the tRNA and rRNA sequences get_vitis_rfam.pl</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x get_vitis_rfam.pl</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /DIR</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./get_vitis_rfam.pl</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> tRNA</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> rRNA</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> /DIR/tRNA_RF<span class="pp">*</span>.txt</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> <span class="ot">-e</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span> <span class="bu">]</span> <span class="kw">||</span> <span class="cf">continue</span> <span class="ex">\ </span>    </span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="va">name</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span> .txt<span class="va">)</span> <span class="ex">\ </span>    </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">esl-sfetch</span> <span class="at">-f</span> Rfam.fa <span class="st">"</span><span class="va">$file</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="st">"/tRNA/</span><span class="va">${name}</span><span class="st">.fa"</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> DIR/rRNA_RF<span class="pp">*</span>.txt</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span>    </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> <span class="ot">-e</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span> <span class="bu">]</span> <span class="kw">||</span> <span class="cf">continue</span> <span class="dt">\</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="va">name</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span> .txt<span class="va">)</span> <span class="dt">\</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="ex">esl-sfetch</span> <span class="at">-f</span> Rfam.fa <span class="st">"</span><span class="va">$file</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="st">"/rRNA/</span><span class="va">${name}</span><span class="st">.fa"</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Next, concatenate all the sequences into single fasta file we can use for alignment</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /tRNA/<span class="pp">*</span>.fa <span class="op">&gt;</span> trna_rfam.fa</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /rRNa/<span class="pp">*</span>.fa <span class="op">&gt;</span> rrna_rfam.fa</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> trna_rfam.fa rrna_rfam.fa <span class="op">&gt;</span> tRNA_rRNA_rfam.fa</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>And lastly, we aligned our filtered reads to this rRNA_tRNA sequence, and use the unmapped reads for subsequent processing</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#build bowtie2 index</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie2-build</span> tRNA_rRNA_rfam.fa /ref/bowtie2-build_rfam</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#alignment</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="va">ref_rfam</span><span class="op">=</span>/DIR/bowtie2-build_rfam</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$DIR</span>/prinseq/good</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="pp">*</span>_good.fastq</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$i</span><span class="st">"</span> _good.fastq<span class="va">)</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie2</span> <span class="at">--threads</span> 4 <span class="at">-x</span> <span class="va">$ref_rfam</span> <span class="at">-q</span> <span class="va">$DIR</span>/prinseq/good/<span class="va">${base}</span>_good.fastq <span class="at">--local</span> <span class="at">-N</span> 0 <span class="at">-k</span> 100 <span class="kw">|</span> <span class="ex">samtools</span> sort <span class="at">-@8</span> <span class="kw">|</span> <span class="ex">samtools</span> view <span class="at">-b</span> <span class="at">-f</span> 4 <span class="at">-@8</span> <span class="at">-o</span> <span class="va">$DIR</span>/bowtie2_rfam/<span class="va">${base}</span>_rfam.unaligned.sorted.bam</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="ex">samtools</span> fastq <span class="at">-T</span> <span class="st">'*'</span> <span class="va">$DIR</span>/bowtie2_rfam/<span class="va">${base}</span>_rfam.unaligned.sorted.bam <span class="kw">|</span> <span class="fu">gzip</span> <span class="op">&gt;</span> <span class="va">$DIR</span>/bowtie2_rfam/<span class="va">${base}</span>_rfam.unaligned.fastq.gz</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="remove-reads-from-chloroplast-genome" class="level3">
+<h3 class="anchored" data-anchor-id="remove-reads-from-chloroplast-genome">Remove reads from chloroplast genome</h3>
+<p>For this, we combine the chloroplast genome from scion and both rootstocks</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#concatenate fasta</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> SB2.1_diploid_chloro.fasta 1103P_c100_k301.pltd.ctg.restart.fasta.fasta 3309.pltd.ctg.restart.fasta.fasta <span class="op">&gt;</span> SB2.1_1103P_3309_chloro.fasta</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#create bowtie2 index</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie2-build</span> SB2.1_1103P_3309_chloro.fasta chloroplast_SB_rootstock</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#alignment</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="va">ref_chloro</span><span class="op">=</span>/DIR/chloroplast_SB_rootstock</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$DIR</span>/bowtie2_rfam</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="pp">*</span>_rfam.unaligned.fastq.gz</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$i</span><span class="st">"</span> _rfam.unaligned.fastq.gz<span class="va">)</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie2</span> <span class="at">--threads</span> 4 <span class="at">-x</span> <span class="va">$ref</span> <span class="dt">\</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>-q <span class="va">$DIR</span>/bowtie2_rfam/<span class="va">${base}</span>_rfam.unaligned.fastq.gz <span class="dt">\</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>--local <span class="at">-N</span> 0 <span class="at">-k</span> 100 <span class="kw">|</span> <span class="ex">samtools</span> sort <span class="at">-@8</span> <span class="kw">|</span> <span class="ex">samtools</span> view <span class="at">-b</span> <span class="at">-f</span> 4 <span class="at">-@8</span> <span class="dt">\</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>-o <span class="va">$DIR</span>/bowtie2_chloroplast/<span class="va">${base}</span>_mapchloroplast.SB.unaligned.sorted.bam</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="ex">samtools</span> fastq <span class="at">-T</span> <span class="st">'*'</span> <span class="va">$DIR</span>/bowtie2_chloroplast/<span class="va">${base}</span>_mapchloroplast.SB.unaligned.sorted.bam <span class="kw">|</span> <span class="fu">gzip</span> <span class="op">&gt;</span> <span class="va">$DIR</span>/bowtie2_chloroplast/<span class="va">${base}</span>_nonchloro_SB.fastq.gz</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is the end of read processing, and the remaining reads were used in the analysis.</p>
+</section>
+<section id="analysis" class="level2">
+<h2 class="anchored" data-anchor-id="analysis">Analysis</h2>
+<p>There are two main analysis I did:</p>
+<ol type="1">
+<li><p>Identify the mobile sRNA, i.e.&nbsp;smallRNA present in scion tissue (Sauvignon Blanc leaf) that presumed to be originated from the rootstock. To do this, we first align the reads to the scion genome, take the unmapped reads and align to the respective rootstock genome.</p></li>
+<li><p>Identify smallRNA reads/clusters that are associated with drought stress. For this, we map the reads to a concatenated reference genome of the scion and rootstock, perform clustering (both done within ShortStack) and run differential analysis on the result to identify clusters that are significantly associated with drought stress</p></li>
+</ol>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

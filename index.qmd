@@ -26,11 +26,115 @@ trim_galore \
 file.fq.gz
 ```
 
-You can add options to executable code like this
+### Prinseq
 
-```{r}
-#| echo: false
-2 * 2
+This is to remove low complexity reads. Output would be good.fq and bad.fq
+
+``` bash
+zcat trimmed.fq.gz | \
+prinseq-lite.pl \
+-lc_method dust \
+-lc_threshold 40 \
+-fastq stdin
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+### Remove tRNA and rRNA
+
+For this, we first download the tRNA and rRNA sequences from Rfam database using esl-sfetch
+
+``` bash
+module load DBD-mysql/4.055-GCC-15.2.0
+module load Infernal
+perl -MDBI -MDBD::mysql   -e 'print "DBI $DBI::VERSION; DBD::mysql $DBD::mysql::VERSION\n"'
+esl-sfetch -h
+esl-sfetch --index /home/cenliau/00_nesi_projects/brins03581_nobackup/Cen/Rfam.fa
+```
+
+Then use this perl script to extract the tRNA and rRNA sequences get_vitis_rfam.pl
+
+``` bash
+chmod +x get_vitis_rfam.pl
+
+cd /DIR
+./get_vitis_rfam.pl
+mkdir -p tRNA
+mkdir -p rRNA
+
+for file in /DIR/tRNA_RF*.txt
+do
+[ -e "$file" ] || continue \     
+name=$(basename "$file" .txt) \     
+esl-sfetch -f Rfam.fa "$file" \
+> "/tRNA/${name}.fa"
+done
+
+for file in DIR/rRNA_RF*.txt
+do    
+[ -e "$file" ] || continue \
+name=$(basename "$file" .txt) \
+esl-sfetch -f Rfam.fa "$file" \
+> "/rRNA/${name}.fa"
+done
+```
+
+Next, concatenate all the sequences into single fasta file we can use for alignment
+
+``` bash
+cat /tRNA/*.fa > trna_rfam.fa
+cat /rRNa/*.fa > rrna_rfam.fa
+cat trna_rfam.fa rrna_rfam.fa > tRNA_rRNA_rfam.fa
+```
+
+And lastly, we aligned our filtered reads to this rRNA_tRNA sequence, and use the unmapped reads for subsequent processing
+
+``` bash
+#build bowtie2 index
+bowtie2-build tRNA_rRNA_rfam.fa /ref/bowtie2-build_rfam
+
+#alignment
+ref_rfam=/DIR/bowtie2-build_rfam
+
+cd $DIR/prinseq/good
+for i in *_good.fastq
+do
+base=$(basename "$i" _good.fastq)
+bowtie2 --threads 4 -x $ref_rfam -q $DIR/prinseq/good/${base}_good.fastq --local -N 0 -k 100 | samtools sort -@8 | samtools view -b -f 4 -@8 -o $DIR/bowtie2_rfam/${base}_rfam.unaligned.sorted.bam
+samtools fastq -T '*' $DIR/bowtie2_rfam/${base}_rfam.unaligned.sorted.bam | gzip > $DIR/bowtie2_rfam/${base}_rfam.unaligned.fastq.gz
+done
+```
+
+### Remove reads from chloroplast genome
+
+For this, we combine the chloroplast genome from scion and both rootstocks
+
+``` bash
+#concatenate fasta
+cat SB2.1_diploid_chloro.fasta 1103P_c100_k301.pltd.ctg.restart.fasta.fasta 3309.pltd.ctg.restart.fasta.fasta > SB2.1_1103P_3309_chloro.fasta
+
+#create bowtie2 index
+bowtie2-build SB2.1_1103P_3309_chloro.fasta chloroplast_SB_rootstock
+
+#alignment
+ref_chloro=/DIR/chloroplast_SB_rootstock
+
+cd $DIR/bowtie2_rfam
+for i in *_rfam.unaligned.fastq.gz
+do
+base=$(basename "$i" _rfam.unaligned.fastq.gz)
+bowtie2 --threads 4 -x $ref \
+-q $DIR/bowtie2_rfam/${base}_rfam.unaligned.fastq.gz \
+--local -N 0 -k 100 | samtools sort -@8 | samtools view -b -f 4 -@8 \
+-o $DIR/bowtie2_chloroplast/${base}_mapchloroplast.SB.unaligned.sorted.bam
+samtools fastq -T '*' $DIR/bowtie2_chloroplast/${base}_mapchloroplast.SB.unaligned.sorted.bam | gzip > $DIR/bowtie2_chloroplast/${base}_nonchloro_SB.fastq.gz
+done
+```
+
+This is the end of read processing, and the remaining reads were used in the analysis.
+
+## Analysis
+
+There are two main analysis I did:
+
+1.  Identify the mobile sRNA, i.e. smallRNA present in scion tissue (Sauvignon Blanc leaf) that presumed to be originated from the rootstock. To do this, we first align the reads to the scion genome, take the unmapped reads and align to the respective rootstock genome.
+
+2.  Identify smallRNA reads/clusters that are associated with drought stress. For this, we map the reads to a concatenated reference genome of the scion and rootstock, perform clustering (both done within ShortStack) and run differential analysis on the result to identify clusters that are significantly associated with drought stress

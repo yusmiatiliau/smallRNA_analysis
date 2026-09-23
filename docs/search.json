@@ -28,5 +28,15 @@
     "crumbs": [
       "SmallRNA analysis"
     ]
+  },
+  {
+    "objectID": "index.html#analysis",
+    "href": "index.html#analysis",
+    "title": "smallRNA_analysis",
+    "section": "Analysis",
+    "text": "Analysis\nThere are two main analysis I did:\n\nIdentify the mobile sRNA, i.e. smallRNA present in scion tissue (Sauvignon Blanc leaf) that presumed to be originated from the rootstock. To do this, we first align the reads to the scion genome, take the unmapped reads and align to the respective rootstock genome.\nIdentify smallRNA reads/clusters that are associated with drought stress. For this, we map the reads to a concatenated reference genome of the scion and rootstock, perform clustering (both done within ShortStack) and run differential analysis on the result to identify clusters that are significantly associated with drought stress",
+    "crumbs": [
+      "SmallRNA analysis"
+    ]
   }
 ]
