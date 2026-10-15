@@ -9,7 +9,7 @@ website:
     contents:
       - text: "SmallRNA analysis"
         href: index.qmd
-     
+        
   navbar:
     right:
       - icon: github
