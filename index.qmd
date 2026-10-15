@@ -207,9 +207,10 @@ Differential analysis was done using Deseq2, using the count.txt table output of
 
 ```{r}
 #Deseq2 library(DESeq2)
-
-counts <- read.table("count.txt", header = TRUE, sep = "t", stringsAsFactors = FALSE) 
-rownames(counts) <- counts$Name locus_info <- counts[, c("Name", "Coords", "MIRNA")]
+#| eval: false
+counts <- read.table("count.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE) 
+rownames(counts) <- counts$Name 
+locus_info <- counts[, c("Name", "Coords", "MIRNA")]
 
 #Define samples 
 sample_map <- list(control_baseline = c("control1_B", "control2_B", "control3_B"), 
@@ -261,13 +262,27 @@ stopifnot(all(pair_table[, "baseline"] == 1), all(pair_table[, "stress"] == 1))
 
 ## Each pair must belong to only one drought treatment
 
-drought_check <- tapply(as.character(coldata$drought),coldata$pair_id,function(x) length(unique(x))) stopifnot(all(drought_check == 1))
+drought_check <- tapply(
+  as.character(coldata$drought),
+  coldata$pair_id,
+  function(x) length(unique(x))
+) 
+
+stopifnot(all(drought_check == 1))
 
 #Split miRNA vs siRNA 
 mirna_ids <- locus_info$Name[locus_info$MIRNA == "Y"] 
 sirna_ids <- locus_info$Name[locus_info$MIRNA == "N"]
 
-counts_mirna <- counts_mat[rownames(counts_mat) %in% mirna_ids, ,drop = FALSE] counts_sirna <- counts_mat[rownames(counts_mat) %in% sirna_ids, ,drop = FALSE]
+counts_mirna <- counts_mat[
+  rownames(counts_mat) %in% mirna_ids, 
+  ,
+  drop = FALSE]
+
+counts_sirna <- counts_mat[
+  rownames(counts_mat) %in% sirna_ids,
+  ,
+  drop = FALSE]
 
 #Diff analysis, example for siRNA 
 count_mat <- round(as.matrix(counts_sirna)) 
@@ -285,7 +300,8 @@ dds <- DESeqDataSetFromMatrix(
   colData = coldata, 
   design = ~ pair_id + ctrl_stress + trt_stress)
 
-dds <- estimateSizeFactors(dds, type = "poscounts") sizeFactors(dds)
+dds <- estimateSizeFactors(dds, type = "poscounts") 
+sizeFactors(dds)
 dds <- DESeq(dds) 
 rn <- resultsNames(dds)
 
@@ -311,7 +327,8 @@ write.csv(interaction_res,"res_interaction_wald_siRNA.csv", row.names = FALSE)
 
 dds_int_lrt <- DESeq(dd, test = "LRT", reduced = ~ pair_id + timepoint)
 
-res_lrt_int <- results(dds_int_lrt) summary(res_lrt_int)
+res_lrt_int <- results(dds_int_lrt) 
+summary(res_lrt_int)
 
 lrt_int_res <- as.data.frame(res_lrt_int) 
 lrt_int_res$Name <- rownames(lrt_int_res)

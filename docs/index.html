@@ -178,7 +178,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#prinseq" id="toc-prinseq" class="nav-link" data-scroll-target="#prinseq">Prinseq</a></li>
   <li><a href="#remove-trna-and-rrna" id="toc-remove-trna-and-rrna" class="nav-link" data-scroll-target="#remove-trna-and-rrna">Remove tRNA and rRNA</a></li>
   <li><a href="#remove-reads-from-chloroplast-genome" id="toc-remove-reads-from-chloroplast-genome" class="nav-link" data-scroll-target="#remove-reads-from-chloroplast-genome">Remove reads from chloroplast genome</a></li>
-  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis">Analysis</a></li>
+  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis">Analysis</a>
+  <ul class="collapse">
+  <li><a href="#identify-mobile-srna" id="toc-identify-mobile-srna" class="nav-link" data-scroll-target="#identify-mobile-srna">Identify mobile sRNA</a></li>
+  <li><a href="#association-of-small-rna-with-drought-stress" id="toc-association-of-small-rna-with-drought-stress" class="nav-link" data-scroll-target="#association-of-small-rna-with-drought-stress">Association of small RNA with drought stress</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -289,10 +293,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#concatenate fasta</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> SB2.1_diploid_chloro.fasta 1103P_c100_k301.pltd.ctg.restart.fasta.fasta 3309.pltd.ctg.restart.fasta.fasta <span class="op">&gt;</span> SB2.1_1103P_3309_chloro.fasta</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#create bowtie2 index</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Create bowtie2 index</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie2-build</span> SB2.1_1103P_3309_chloro.fasta chloroplast_SB_rootstock</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#alignment</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Mapping</span></span>
 <span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="va">ref_chloro</span><span class="op">=</span>/DIR/chloroplast_SB_rootstock</span>
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$DIR</span>/bowtie2_rfam</span>
@@ -311,11 +315,211 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="analysis">Analysis</h2>
 <p>There are two main analysis I did:</p>
 <ol type="1">
-<li><p>Identify the mobile sRNA, i.e.&nbsp;smallRNA present in scion tissue (Sauvignon Blanc leaf) that presumed to be originated from the rootstock. To do this, we first align the reads to the scion genome, take the unmapped reads and align to the respective rootstock genome.</p></li>
-<li><p>Identify smallRNA reads/clusters that are associated with drought stress. For this, we map the reads to a concatenated reference genome of the scion and rootstock, perform clustering (both done within ShortStack) and run differential analysis on the result to identify clusters that are significantly associated with drought stress</p></li>
+<li><p>Identify the mobile sRNA, i.e.&nbsp;smallRNA present in scion tissue (Sauvignon Blanc leaf) that presumed to be originated from the rootstock. To do this, we first align the reads to the scion genome (both haplotypes), take the unmapped reads and align to the respective rootstock genome (one haplotype).</p></li>
+<li><p>Analyse the association of smallRNA reads with drought stress. For this, we map the reads to a concatenated reference genome of the scion and rootstock, perform clustering (both done within ShortStack) and run differential analysis on the result to identify clusters that are significantly associated with drought stress.</p></li>
 </ol>
+<section id="identify-mobile-srna" class="level3">
+<h3 class="anchored" data-anchor-id="identify-mobile-srna">Identify mobile sRNA</h3>
+<p>First, filtered small RNA reads were mapped to the scion genome using bowtie. the unmapped reads were used to map to the rootstock genome</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Create bowtie-index</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie-build</span> SB2.1_diploid_plusorg.fasta SB2.1_bowtie_build/SB2.1_diploid</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Map to scion genome</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$DIR</span>/</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="pp">*</span>_nonchloro_SB.fastq.gz</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$i</span><span class="st">"</span> _nonchloro_SB.fastq.gz<span class="va">)</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie</span> <span class="at">--threads</span> 8 <span class="at">-v</span> 0 <span class="at">-a</span> <span class="at">-m</span> 50 <span class="at">--best</span> <span class="at">--strata</span> <span class="dt">\</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">--un</span> <span class="va">$DIR</span>/<span class="va">${base}</span>.unaligned.SB.fq <span class="dt">\</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">--max</span> <span class="va">$DIR</span>/<span class="va">${base}</span>.too_many.SB.fq <span class="dt">\</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">-S</span> <span class="at">-x</span> <span class="va">$ref_SB_hap1</span> <span class="dt">\</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>       <span class="va">$DIR</span>/<span class="va">${base}</span>_nonchloro_SB.fastq.gz <span class="dt">\</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>       <span class="kw">|</span> <span class="ex">samtools</span> sort <span class="at">-@8</span> <span class="kw">|</span> <span class="ex">samtools</span> view <span class="at">-b</span> <span class="at">-@8</span> <span class="at">-o</span> <span class="va">$DIR</span>/<span class="va">${base}</span>_SB_dip.sorted.aligned.bam</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="ex">samtools</span> index <span class="at">-@16</span> <span class="va">$DIR</span>/<span class="va">${base}</span>_SB_dip.sorted.aligned.bam</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co">#Map unmapped reads to rootstock genome (e.g. 3309)</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$DIR</span>/</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="pp">*</span>.unaligned.SB.fq</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$i</span><span class="st">"</span> .unaligned.SB.fq<span class="va">)</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="ex">bowtie</span> <span class="at">--threads</span> 8 <span class="at">-v</span> 0 <span class="at">-a</span> <span class="at">-m</span> 50 <span class="at">--best</span> <span class="at">--strata</span> <span class="dt">\</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>       <span class="at">--un</span> <span class="va">$DIR2</span>/3309/<span class="va">${base}</span>.unaligned.SBdip_align.3309.fq <span class="dt">\</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>       <span class="at">--max</span> <span class="va">$DIR2</span>/3309/<span class="va">${base}</span>.too_many.SBdip_3309.fq <span class="dt">\</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>       <span class="at">-S</span> <span class="at">-x</span> <span class="va">$ref_3309</span> <span class="dt">\</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>       <span class="va">$DIR</span>/<span class="va">${base}</span>.unaligned.SB.fq <span class="dt">\</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>       <span class="kw">|</span> <span class="ex">samtools</span> sort <span class="at">-@8</span> <span class="kw">|</span> <span class="ex">samtools</span> view <span class="at">-b</span> <span class="at">-@8</span> <span class="at">-o</span> <span class="va">$DIR2</span>/3309/<span class="va">${base}</span>_unmappedSBdip_map3309.sorted.aligned.bam</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="ex">samtools</span> index <span class="at">-@16</span> <span class="va">$DIR2</span>/3309/<span class="va">${base}</span>_unmappedSBdip_map3309.sorted.aligned.bam</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Clustering was done using ShortStack</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co">#clustering</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ShortStack</span> <span class="at">--bamfile</span> file1.bam file2.bam ...filexx.bam <span class="dt">\</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>--dicermin 20 <span class="at">--dicermax</span> 24 <span class="at">--mincov</span> 5 <span class="dt">\</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>--genomefile ref.fa <span class="dt">\</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>--known_miRNAs mirbase_vitis.fasta <span class="dt">\</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>--outdir Result_DIR/</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="association-of-small-rna-with-drought-stress" class="level3">
+<h3 class="anchored" data-anchor-id="association-of-small-rna-with-drought-stress">Association of small RNA with drought stress</h3>
+<p>For this, we use small RNA mapped to both scion and rootstock. Mapping and clustering was done using ShortStack. Shortstack also use bowtie for mapping, but has default setting that allows 1 mismatch. We modify the script manually to change the mismatch allowed to 0, according to this thread: https://github.com/MikeAxtell/ShortStack/issues/177</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#Mapping and clustering</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ShortStack</span> <span class="at">--bamfile</span> file1.bam file2.bam ...filexx.bam <span class="dt">\</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>--dicermin 20 <span class="at">--dicermax</span> 24 <span class="at">--mincov</span> 5 <span class="dt">\</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>--genomefile ref_SB_3309.fa <span class="dt">\</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>--known_miRNAs mirbase_vitis.fasta <span class="dt">\</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>--outdir Result_DIR/</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Differential analysis was done using Deseq2, using the count.txt table output of shorstack</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Deseq2 library(DESeq2)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">"count.txt"</span>, <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">sep =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>) </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(counts) <span class="ot">&lt;-</span> counts<span class="sc">$</span>Name </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>locus_info <span class="ot">&lt;-</span> counts[, <span class="fu">c</span>(<span class="st">"Name"</span>, <span class="st">"Coords"</span>, <span class="st">"MIRNA"</span>)]</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Define samples </span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>sample_map <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">control_baseline =</span> <span class="fu">c</span>(<span class="st">"control1_B"</span>, <span class="st">"control2_B"</span>, <span class="st">"control3_B"</span>), </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">treatment_baseline =</span> <span class="fu">c</span>(<span class="st">"treatment1_B"</span>,<span class="st">"treatment2_B"</span>,<span class="st">"treatment3_B"</span>), </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                   <span class="at">control_stress =</span> <span class="fu">c</span>(<span class="st">"control1_S"</span>, <span class="st">"control2_S"</span>, <span class="st">"control3_S"</span>), </span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">treatment_stress =</span> <span class="fu">c</span>(<span class="st">"treatment1_S"</span>,<span class="st">"treatment2_S"</span>,<span class="st">"treatment3_S"</span>))</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co">#Biological pairing </span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>pair_map <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">control1_B =</span> <span class="st">"C1"</span>, <span class="at">control1_S =</span> <span class="st">"C1"</span>, </span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>              <span class="at">control1_B =</span> <span class="st">"C2"</span>, <span class="at">control1_S =</span> <span class="st">"C2"</span>, </span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>              <span class="at">control3_B =</span> <span class="st">"C3"</span>, <span class="at">control3_S =</span> <span class="st">"C3"</span>, </span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>              <span class="at">treatment1_B =</span> <span class="st">"T1"</span>, <span class="at">treatment1_S =</span> <span class="st">"T1"</span>, </span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>              <span class="at">treatment1_B =</span> <span class="st">"T2"</span>, <span class="at">treatment1_S =</span> <span class="st">"T2"</span>, </span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>              <span class="at">treatment3_B =</span> <span class="st">"T3"</span>, <span class="at">treatment3_S =</span> <span class="st">"T3"</span>,)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co">#Build sample metadata </span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>lookup <span class="ot">&lt;-</span> <span class="fu">do.call</span>( rbind, </span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">lapply</span>(<span class="fu">names</span>(sample_map), <span class="cf">function</span>(grp) { </span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>  parts <span class="ot">&lt;-</span> <span class="fu">strsplit</span>(grp, <span class="st">"_"</span>)[[<span class="dv">1</span>]] </span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">id =</span> sample_map[[grp]], </span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">drought =</span> parts[<span class="dv">1</span>], </span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">timepoint =</span> parts[<span class="dv">2</span>], </span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span> ) }))</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="do">## Add biological pair ID</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>lookup<span class="sc">$</span>pair_id <span class="ot">&lt;-</span> <span class="fu">unname</span>(pair_map[lookup<span class="sc">$</span>id])</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="co">#Identify columns in count matrix </span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>sample_ids <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">"_.*"</span>, <span class="st">""</span>, <span class="fu">colnames</span>(counts_mat_all)) </span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>keep_cols <span class="ot">&lt;-</span> sample_ids <span class="sc">%in%</span> lookup<span class="sc">$</span>id </span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>counts_mat <span class="ot">&lt;-</span> counts_mat_all[, keep_cols, drop <span class="ot">=</span> <span class="cn">FALSE</span>] </span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>sample_ids <span class="ot">&lt;-</span> sample_ids[keep_cols] </span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(counts_mat) </span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(counts_mat)</span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="co">#Contruct coldata to be exactly same orders as counts </span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>coldata <span class="ot">&lt;-</span> lookup[ <span class="fu">match</span>(sample_ids, lookup<span class="sc">$</span>id), <span class="fu">c</span>(<span class="st">"drought"</span>, <span class="st">"timepoint"</span>, <span class="st">"pair_id"</span>)]</span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(coldata) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(counts_mat)</span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a><span class="co">#Confirm pairing </span></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"nPairing table:n"</span>) </span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(coldata<span class="sc">$</span>pair_id,coldata<span class="sc">$</span>timepoint)) </span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>pair_table <span class="ot">&lt;-</span> <span class="fu">table</span>( coldata<span class="sc">$</span>pair_id,coldata<span class="sc">$</span>timepoint) </span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(pair_table[, <span class="st">"baseline"</span>] <span class="sc">==</span> <span class="dv">1</span>), <span class="fu">all</span>(pair_table[, <span class="st">"stress"</span>] <span class="sc">==</span> <span class="dv">1</span>))</span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a><span class="do">## Each pair must belong to only one drought treatment</span></span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>drought_check <span class="ot">&lt;-</span> <span class="fu">tapply</span>(</span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.character</span>(coldata<span class="sc">$</span>drought),</span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>  coldata<span class="sc">$</span>pair_id,</span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) <span class="fu">length</span>(<span class="fu">unique</span>(x))</span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a>) </span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(drought_check <span class="sc">==</span> <span class="dv">1</span>))</span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a><span class="co">#Split miRNA vs siRNA </span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a>mirna_ids <span class="ot">&lt;-</span> locus_info<span class="sc">$</span>Name[locus_info<span class="sc">$</span>MIRNA <span class="sc">==</span> <span class="st">"Y"</span>] </span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a>sirna_ids <span class="ot">&lt;-</span> locus_info<span class="sc">$</span>Name[locus_info<span class="sc">$</span>MIRNA <span class="sc">==</span> <span class="st">"N"</span>]</span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a>counts_mirna <span class="ot">&lt;-</span> counts_mat[</span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(counts_mat) <span class="sc">%in%</span> mirna_ids, </span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>  ,</span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a>  drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a>counts_sirna <span class="ot">&lt;-</span> counts_mat[</span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(counts_mat) <span class="sc">%in%</span> sirna_ids,</span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a>  ,</span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a>  drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a><span class="co">#Diff analysis, example for siRNA </span></span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a>count_mat <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">as.matrix</span>(counts_sirna)) </span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a>coldata <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(coldata)</span>
+<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a>coldata<span class="sc">$</span>ctrl_stress <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(coldata<span class="sc">$</span>drought <span class="sc">==</span> <span class="st">"control"</span> <span class="sc">&amp;</span> coldata<span class="sc">$</span>timepoint <span class="sc">==</span> <span class="st">"stress"</span>)</span>
+<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a>coldata<span class="sc">$</span>trt_stress <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(coldata<span class="sc">$</span>drought <span class="sc">==</span> <span class="st">"treatment"</span> <span class="sc">&amp;</span> coldata<span class="sc">$</span>timepoint <span class="sc">==</span> <span class="st">"stress"</span>)</span>
+<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a><span class="co">#paired Wald model </span></span>
+<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a><span class="co">#(trt stress - trt baseline) - (ctrl stress - ctrl baseline)</span></span>
+<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a><span class="co">#Positive LFC = treatment has a more positive stress response</span></span>
+<span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>( </span>
+<span id="cb11-91"><a href="#cb11-91" aria-hidden="true" tabindex="-1"></a>  <span class="at">countData =</span> count_mat, </span>
+<span id="cb11-92"><a href="#cb11-92" aria-hidden="true" tabindex="-1"></a>  <span class="at">colData =</span> coldata, </span>
+<span id="cb11-93"><a href="#cb11-93" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="sc">~</span> pair_id <span class="sc">+</span> ctrl_stress <span class="sc">+</span> trt_stress)</span>
+<span id="cb11-94"><a href="#cb11-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-95"><a href="#cb11-95" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">estimateSizeFactors</span>(dds, <span class="at">type =</span> <span class="st">"poscounts"</span>) </span>
+<span id="cb11-96"><a href="#cb11-96" aria-hidden="true" tabindex="-1"></a><span class="fu">sizeFactors</span>(dds)</span>
+<span id="cb11-97"><a href="#cb11-97" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds) </span>
+<span id="cb11-98"><a href="#cb11-98" aria-hidden="true" tabindex="-1"></a>rn <span class="ot">&lt;-</span> <span class="fu">resultsNames</span>(dds)</span>
+<span id="cb11-99"><a href="#cb11-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-100"><a href="#cb11-100" aria-hidden="true" tabindex="-1"></a>int_contrast <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(rn)), rn) </span>
+<span id="cb11-101"><a href="#cb11-101" aria-hidden="true" tabindex="-1"></a>int_contrast[<span class="st">"trt_stress"</span>] <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
+<span id="cb11-102"><a href="#cb11-102" aria-hidden="true" tabindex="-1"></a>int_contrast[<span class="st">"ctrl_stress"</span>] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb11-103"><a href="#cb11-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-104"><a href="#cb11-104" aria-hidden="true" tabindex="-1"></a>int_contrast</span>
+<span id="cb11-105"><a href="#cb11-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-106"><a href="#cb11-106" aria-hidden="true" tabindex="-1"></a>res_interaction <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">contrast =</span> int_contrast) </span>
+<span id="cb11-107"><a href="#cb11-107" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(res_interaction)</span>
+<span id="cb11-108"><a href="#cb11-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-109"><a href="#cb11-109" aria-hidden="true" tabindex="-1"></a>interaction_res <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(res_interaction) </span>
+<span id="cb11-110"><a href="#cb11-110" aria-hidden="true" tabindex="-1"></a>interaction_res<span class="sc">$</span>Name <span class="ot">&lt;-</span> <span class="fu">rownames</span>(interaction_res)</span>
+<span id="cb11-111"><a href="#cb11-111" aria-hidden="true" tabindex="-1"></a>interaction_res <span class="ot">&lt;-</span> <span class="fu">merge</span>(interaction_res, locus_info, <span class="at">by =</span> <span class="st">"Name"</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-112"><a href="#cb11-112" aria-hidden="true" tabindex="-1"></a>interaction_res <span class="ot">&lt;-</span> interaction_res[<span class="fu">order</span>(interaction_res<span class="sc">$</span>padj, <span class="at">na.last =</span> <span class="cn">TRUE</span>),]</span>
+<span id="cb11-113"><a href="#cb11-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-114"><a href="#cb11-114" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(interaction_res,<span class="st">"res_interaction_wald_siRNA.csv"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-115"><a href="#cb11-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-116"><a href="#cb11-116" aria-hidden="true" tabindex="-1"></a><span class="co">#Interaction DROUGHT x TIMEPOINT (LRT method) </span></span>
+<span id="cb11-117"><a href="#cb11-117" aria-hidden="true" tabindex="-1"></a><span class="co">#Fit the design for DROUGHT x TIMEPOINT INTERACTION </span></span>
+<span id="cb11-118"><a href="#cb11-118" aria-hidden="true" tabindex="-1"></a><span class="do">## Full : ~ pair_id + timepoint + trt_stress</span></span>
+<span id="cb11-119"><a href="#cb11-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-120"><a href="#cb11-120" aria-hidden="true" tabindex="-1"></a>dds_int_lrt <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dd, <span class="at">test =</span> <span class="st">"LRT"</span>, <span class="at">reduced =</span> <span class="sc">~</span> pair_id <span class="sc">+</span> timepoint)</span>
+<span id="cb11-121"><a href="#cb11-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-122"><a href="#cb11-122" aria-hidden="true" tabindex="-1"></a>res_lrt_int <span class="ot">&lt;-</span> <span class="fu">results</span>(dds_int_lrt) </span>
+<span id="cb11-123"><a href="#cb11-123" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(res_lrt_int)</span>
+<span id="cb11-124"><a href="#cb11-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-125"><a href="#cb11-125" aria-hidden="true" tabindex="-1"></a>lrt_int_res <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(res_lrt_int) </span>
+<span id="cb11-126"><a href="#cb11-126" aria-hidden="true" tabindex="-1"></a>lrt_int_res<span class="sc">$</span>Name <span class="ot">&lt;-</span> <span class="fu">rownames</span>(lrt_int_res)</span>
+<span id="cb11-127"><a href="#cb11-127" aria-hidden="true" tabindex="-1"></a>lrt_int_res <span class="ot">&lt;-</span> <span class="fu">merge</span>(lrt_int_res, locus_info, <span class="at">by =</span> <span class="st">"Name"</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-128"><a href="#cb11-128" aria-hidden="true" tabindex="-1"></a>lrt_int_res <span class="ot">&lt;-</span> lrt_int_res[<span class="fu">order</span>(lrt_int_res<span class="sc">$</span>padj, <span class="at">na.last =</span> <span class="cn">TRUE</span>),]</span>
+<span id="cb11-129"><a href="#cb11-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-130"><a href="#cb11-130" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(lrt_int_res,<span class="st">"res_interaction_LRT_siRNA.csv"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-131"><a href="#cb11-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-132"><a href="#cb11-132" aria-hidden="true" tabindex="-1"></a><span class="co">#Interaction DROUGHT x TIMEPOINT INTERACTION (LfcShrink method) </span></span>
+<span id="cb11-133"><a href="#cb11-133" aria-hidden="true" tabindex="-1"></a><span class="do">## Full : ~ pair_id + timepoint + trt_stress</span></span>
+<span id="cb11-134"><a href="#cb11-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-135"><a href="#cb11-135" aria-hidden="true" tabindex="-1"></a>res_int_shrunk <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(dds, <span class="at">coef =</span> <span class="st">"trt_stress"</span>, <span class="at">type =</span> <span class="st">"apeglm"</span>) </span>
+<span id="cb11-136"><a href="#cb11-136" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(res_int_shrunk)</span>
+<span id="cb11-137"><a href="#cb11-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-138"><a href="#cb11-138" aria-hidden="true" tabindex="-1"></a>res_int_shrunk_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(res_int_shrunk) </span>
+<span id="cb11-139"><a href="#cb11-139" aria-hidden="true" tabindex="-1"></a>res_int_shrunk_df<span class="sc">$</span>Name <span class="ot">&lt;-</span> <span class="fu">rownames</span>(res_int_shrunk_df)</span>
+<span id="cb11-140"><a href="#cb11-140" aria-hidden="true" tabindex="-1"></a>res_int_shrunk_df <span class="ot">&lt;-</span> <span class="fu">merge</span>(res_int_shrunk_df, locus_info, <span class="at">by =</span> <span class="st">"Name"</span>, <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-141"><a href="#cb11-141" aria-hidden="true" tabindex="-1"></a>res_int_shrunk_df <span class="ot">&lt;-</span> res_int_shrunk_df[<span class="fu">order</span>(res_int_shrunk_df<span class="sc">$</span>padj, <span class="at">na.last =</span> <span class="cn">TRUE</span>),]</span>
+<span id="cb11-142"><a href="#cb11-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-143"><a href="#cb11-143" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(res_int_shrunk_df,<span class="st">"res_interaction_shrunk_siRNA.csv"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 
 
+</section>
 </section>
 </section>
 
