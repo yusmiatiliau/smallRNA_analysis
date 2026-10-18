@@ -4,5 +4,8 @@
   },
   "index.qmd": {
     "index.html": "bca07f5d"
+  },
+  "genome_assembly.qmd": {
+    "genome_assembly.html": "acfd61db"
   }
 }

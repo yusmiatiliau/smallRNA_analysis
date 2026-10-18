@@ -1,0 +1,253 @@
+---
+title: "Genome assembly of Roostock - 3309 and 1103P"
+format: html
+editor: visual
+---
+
+## Scripts for Genome assembly of Roostocks - 3309 and 1103P
+
+This document records the tools and scripts used for rootstock genome assembly
+
+## Processing
+
+### Short read data (MGI) filtering
+
+``` bash
+ml fastp/0.23.4-GCC-11.3.0
+
+
+for i in *_1.fq.gz    
+do
+fastp --trim_front1   4     --trim_front2 4   --cut_right  --cut_mean_quality 25  --average_qual 30 --length_required  50  --fix_mgi_id --disable_adapter_trimming --in1 $i --out1 ${i%_1.fq.gz}_1.filtered.fq.gz  --in2   ${i%_1.fq.gz}_2.fq.gz --out2  ${i%_1.fq.gz}_2.filtered.fq.gz --thread 8 
+echo "done processing $i"
+done
+
+#disabled adaptor trimming since no over-represented sequences found and not clear what sequences to use. 
+```
+
+### Long read data (ONT) basecalling
+
+```bash
+#Data were basecalled using the 5mC,5hmC and 6mA in all contexts in super-accurate mode
+
+SAMPLES=sample_sheet.csv
+POD5=/DIR_pod5/
+OUTFILE=Sample_sup_5mC_5hmC_6mA.0.9.0.bam
+DEMUX=Project_demux
+dorado basecaller sup,5mC_5hmC,6mA --sample-sheet $SAMPLES --kit-name SQK-NBD114-96  --device 'cuda:all'  --recursive $POD5 --resume-from $OUTFILE > ${OUTFILE%.bam}.resumed.bam
+dorado demux --sample-sheet $SAMPLES  --output-dir $DEMUX  --no-classify $OUTFILE
+
+# Convert to fq and merge
+module load pigz/2.7 SAMtools/1.19-GCC-12.3.0
+
+bam=sample.bam
+fq=sample.fastq.gz
+samtools fastq -T "*" -@ 8 $bam | pigz -p 8  -9 >  $fq
+
+cat sample1.fastq.gz sample2.fastq.gz .. > combined.fastq.gz
+
+# RUn stats with seqkit stats or seqkit stats -a
+```
+
+### Filtering
+
+``` bash
+#Filter with chopper or seqtk
+#We can apply different criteria of filtering, e.g. exclude reads with Q <10 and length < 1kb
+
+gunzip -c sample.fastq.gz | chopper --minlength 8000 --threads 16 | gzip > sample.filtered.fastq.gz
+
+```
+
+
+## Dorado Correct
+
+We ran dorado correct for read correction, but also run assembly with the simplex read directly, and will compare the result for both approach
+
+``` bash
+
+module load Dorado/0.9.0
+
+dorado correct sample.filtered.fastq.gz --to-paf -t 32 -x cpu > sample.paf
+dorado correct sample.fastq.gz --from-paf sample.paf -x cuda:all -t 32 > sample_corrected.fasta
+
+```
+
+## Genome assembly
+
+Assembly was done using hifiasm, and run with different options:
+1. from dorado corrected reads (>8kb)
+2. from simplex non-corrected reads (include all >1kb >Q10 reads) --> using --ont argument which is available in later version of hifiasm
+
+``` bash
+
+# Install hifiasm
+
+git clone https://github.com/chhylp123/hifiasm
+cd hifiasm && make
+
+export PATH=$PATH:/nesi/nobackup/brins03581/Cen/tools/hifiasm
+
+# Run hifiasm 
+
+hifiasm -t 32 --ont -o /sample_simplex_ONT --chem-c 2 sample.filtered.fastq
+
+```
+
+## First QC check on assembly
+
+Perform QC on each assembly separately:
+
+- simplex (3309 hap1 and hap2; 1103P hap1 and hap2)
+- corrected (3309 hap1 and hap2; 1103P hap1 and hap2)
+
+QCs:
+Quast: for contiguity (no. of contigs, N50, total length among others)
+compleasm: for completeness (BUSCO genes, missing genes)
+Dgenies for comparison with other assemblies (e.g. PN40024 T2T)
+Mercury: for accuracy (QV, also completeness)
+
+``` bash
+
+# Quast
+ml QUAST/5.2.0-gimkl-2022a
+
+DIR=rootstock_2025
+quast.py assembly.fasta
+
+# COmpleasm
+
+module load compleasm/0.2.5-gimkl-2022a 
+
+#Run on each hap1 and hap2 separately
+compleasm.py run -a simplex.hap1.p_ctg.fa  -o simplex_hap1  -t 8 -l eudicots
+
+compleasm.py run -a simplex.hap2.p_ctg.fa  -o simplex_hap2  -t 8 -l eudicots
+
+```
+
+## Purge duplication
+
+Run for each haplotype separately,
+Use this: https://github.com/dfguan/purge_dups
+
+``` bash
+module load minimap2/2.28-GCC-12.3.0
+
+#1103P_correct_hap2
+cd /1103P_corr_hap2/
+minimap2 -x lr:hq -t 8 /1103P_corrected.bp.hap2.p_ctg.fa /1103P_combined_sup_5mC_5hmC_6mA.0.9.0.8kbplus.filtered.fastq |  gzip -c - > 1103P_corrected2.hap2.paf.gz
+
+/tools/purge_dups/bin/pbcstat 1103P_corrected2.hap2.paf.gz
+
+/tools/purge_dups/bin/calcuts PB.stat > cutoffs 2>calcults.log
+
+/tools/purge_dups/bin/split_fa 1103P_corrected.bp.hap2.p_ctg.fa > 1103P_corrected_hap2.fa.split
+
+minimap2 -xasm5 -DP  1103P_corrected_hap2.fa.split  1103P_corrected_hap2.fa.split | gzip -c - > 1103P_corrected_hap2.fa.split.self.paf.gz
+
+/tools/purge_dups/bin/purge_dups -2 -T cutoffs -c PB.base.cov 1103P_corrected_hap2.fa.split.self.paf.gz > dups.bed 2> purge_dups.log
+
+/tools/purge_dups/bin/get_seqs -e dups.bed /1103P_corrected.bp.hap2.p_ctg.fa
+
+```
+
+## Filter with dgenies
+
+After purged dups, QC based on quast and compleasm still look good, but no. of contigs still quite high for some of the assemblies.
+
+Next steps:
+
+- Map the assemblies to PN40024 T2T genome assembly on dgenies (https://dgenies.toulouse.inra.fr/run)
+- Download the paf files
+- Filter on excel, retain only contigs with residue matches > 50kb
+- save these (the contig names) on txt file, and use this to filter the genome assembly using seqkit
+- re-do QC on these filtered assemblies
+
+``` bash
+# Filter assembly using seqkit
+
+module load SeqKit/2.4.0
+
+seqkit grep -f /1103P_corr_hap1_purged_dgenies.txt /1103P_corr_hap1_purged.fa -o /purged_dup_filtered_dgenies/1103P_corr_hap1_purged_dgenies.fa
+
+```
+
+## Polish with NextPolish2
+
+To increased accuracy, next step is to polish the assembly.
+
+We use NextPolish2 (https://github.com/Nextomics/NextPolish2)
+
+Steps as follow, replace the HiFi with the filtered ONT reads (Q20), and use winnowmap.
+
+
+``` bash
+
+# Prepare reads (Winnowmap)
+use these ONT reads:
+/3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz
+/1103P_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz
+
+seqkit stats -a /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz
+
+#Meryl
+meryl count k=15 output 3309_hap1_merylDB /3309_simplex_hap1_purged_dgenies.fa
+
+meryl count k=15 output 3309_hap2_merylDB /3309_simplex_hap2_purged_dgenies.fa
+
+meryl print greater-than distinct=0.9998 1103P_hap1_merylDB > 1103P_hap1_repetitive_k15.txt
+
+meryl print greater-than distinct=0.9998 1103P_hap2_merylDB > 1103P_hap2_repetitive_k15.txt
+
+# Winnowmap
+
+module load Winnowmap/2.03-GCC-11.3.0
+winnowmap -t 5 -W 3309_hap1_repetitive_k15.txt -ax map-ont /3309_simplex_hap1_purged_dgenies.fa /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz | samtools sort -o 3309_hap1_winnowmap.map.sort.bam -
+samtools index 3309_hap1_winnowmap.map.sort.bam
+
+winnowmap -t 5 -W 3309_hap2_repetitive_k15.txt -ax map-ont /3309_simplex_hap2_purged_dgenies.fa /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz | samtools sort -o 3309_hap2_winnowmap.map.sort.bam -
+samtools index 3309_hap2_winnowmap.map.sort.bam
+
+# Prepare k-mer profile (yak)
+module load yak/0.1
+
+#use kmer=19 as per Annabel's suggestion, as when run mercury
+#https://github.com/Nextomics/NextPolish2
+
+#Yak
+cd /nextpolish2
+yak count -o 3309_k31.yak -k 31 -b 37 <(zcat /MGI_data/IB008_sample1_1.filtered.fq.gz) <(zcat /IB008_sample1_2.filtered.fq.gz)
+
+yak count -o 3309_k21.yak -k 21 -b 37 <(zcat /MGI_data/IB008_sample1_1.filtered.fq.gz) <(zcat /IB008_sample1_2.filtered.fq.gz)
+
+##Nextpolish2
+
+module load NextPolish2/0.2.1-foss-2023a
+
+nextPolish2 -t 8 /3309_hap1_winnowmap.map.sort.bam /3309_simplex_hap1_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak > /nextpolish2/polished/3309_simplex_hap1_repeat_polished.fa
+
+nextPolish2 -t 8 /3309_hap2_winnowmap.map.sort.bam /3309_simplex_hap2_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak > /nextpolish2/polished/3309_simplex_hap2_repeat_polished.fa
+
+```
+
+
+## Scaffold with Ragtag
+
+``` bash
+ml Miniconda3
+source activate /nesi/project/brins03581/env/ragtag
+REF=PN40024.T21.fa 
+cd /nextpolish2/polished/
+
+for i in *.fa
+do
+ragtag.py scaffold -o /nextpolish2/ragtag${i}_ragtag_nostringency -t 8 $REF $i
+done
+
+
+This uses the default stringency setting (which is -1 0.2)
+Also tried with different stringency (0.6; 0.8; 0.9)
+
+```
+

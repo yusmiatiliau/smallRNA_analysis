@@ -7,6 +7,8 @@ website:
   sidebar:
     style: docked
     contents:
+      - text: "Genome Assembly of Rootstocks"
+        href: genome_assembly.qmd
       - text: "SmallRNA analysis"
         href: index.qmd
         

@@ -38,5 +38,105 @@
     "crumbs": [
       "SmallRNA analysis"
     ]
+  },
+  {
+    "objectID": "genome_assembly.html",
+    "href": "genome_assembly.html",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "",
+    "text": "This document records the tools and scripts used for rootstock genome assembly",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#scripts-for-genome-assembly-of-roostocks---3309-and-1103p",
+    "href": "genome_assembly.html#scripts-for-genome-assembly-of-roostocks---3309-and-1103p",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "",
+    "text": "This document records the tools and scripts used for rootstock genome assembly",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#processing",
+    "href": "genome_assembly.html#processing",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Processing",
+    "text": "Processing\n\nShort read data (MGI) filtering\nml fastp/0.23.4-GCC-11.3.0\n\n\nfor i in *_1.fq.gz    \ndo\nfastp --trim_front1   4     --trim_front2 4   --cut_right  --cut_mean_quality 25  --average_qual 30 --length_required  50  --fix_mgi_id --disable_adapter_trimming --in1 $i --out1 ${i%_1.fq.gz}_1.filtered.fq.gz  --in2   ${i%_1.fq.gz}_2.fq.gz --out2  ${i%_1.fq.gz}_2.filtered.fq.gz --thread 8 \necho \"done processing $i\"\ndone\n\n#disabled adaptor trimming since no over-represented sequences found and not clear what sequences to use. \n\n\nLong read data (ONT) basecalling\n#Data were basecalled using the 5mC,5hmC and 6mA in all contexts in super-accurate mode\n\nSAMPLES=sample_sheet.csv\nPOD5=/DIR_pod5/\nOUTFILE=Sample_sup_5mC_5hmC_6mA.0.9.0.bam\nDEMUX=Project_demux\ndorado basecaller sup,5mC_5hmC,6mA --sample-sheet $SAMPLES --kit-name SQK-NBD114-96  --device 'cuda:all'  --recursive $POD5 --resume-from $OUTFILE &gt; ${OUTFILE%.bam}.resumed.bam\ndorado demux --sample-sheet $SAMPLES  --output-dir $DEMUX  --no-classify $OUTFILE\n\n# Convert to fq and merge\nmodule load pigz/2.7 SAMtools/1.19-GCC-12.3.0\n\nbam=sample.bam\nfq=sample.fastq.gz\nsamtools fastq -T \"*\" -@ 8 $bam | pigz -p 8  -9 &gt;  $fq\n\ncat sample1.fastq.gz sample2.fastq.gz .. &gt; combined.fastq.gz\n\n# RUn stats with seqkit stats or seqkit stats -a\n\n\nFiltering\n#Filter with chopper or seqtk\n#We can apply different criteria of filtering, e.g. exclude reads with Q &lt;10 and length &lt; 1kb\n\ngunzip -c sample.fastq.gz | chopper --minlength 8000 --threads 16 | gzip &gt; sample.filtered.fastq.gz",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#dorado-correct",
+    "href": "genome_assembly.html#dorado-correct",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Dorado Correct",
+    "text": "Dorado Correct\nWe ran dorado correct for read correction, but also run assembly with the simplex read directly, and will compare the result for both approach\n\nmodule load Dorado/0.9.0\n\ndorado correct sample.filtered.fastq.gz --to-paf -t 32 -x cpu &gt; sample.paf\ndorado correct sample.fastq.gz --from-paf sample.paf -x cuda:all -t 32 &gt; sample_corrected.fasta",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#genome-assembly",
+    "href": "genome_assembly.html#genome-assembly",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Genome assembly",
+    "text": "Genome assembly\nAssembly was done using hifiasm, and run with different options: 1. from dorado corrected reads (&gt;8kb) 2. from simplex non-corrected reads (include all &gt;1kb &gt;Q10 reads) –&gt; using –ont argument which is available in later version of hifiasm\n\n# Install hifiasm\n\ngit clone https://github.com/chhylp123/hifiasm\ncd hifiasm && make\n\nexport PATH=$PATH:/nesi/nobackup/brins03581/Cen/tools/hifiasm\n\n# Run hifiasm \n\nhifiasm -t 32 --ont -o /sample_simplex_ONT --chem-c 2 sample.filtered.fastq",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#first-qc-check-on-assembly",
+    "href": "genome_assembly.html#first-qc-check-on-assembly",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "First QC check on assembly",
+    "text": "First QC check on assembly\nPerform QC on each assembly separately:\n\nsimplex (3309 hap1 and hap2; 1103P hap1 and hap2)\ncorrected (3309 hap1 and hap2; 1103P hap1 and hap2)\n\nQCs: Quast: for contiguity (no. of contigs, N50, total length among others) compleasm: for completeness (BUSCO genes, missing genes) Dgenies for comparison with other assemblies (e.g. PN40024 T2T) Mercury: for accuracy (QV, also completeness)\n\n# Quast\nml QUAST/5.2.0-gimkl-2022a\n\nDIR=rootstock_2025\nquast.py assembly.fasta\n\n# COmpleasm\n\nmodule load compleasm/0.2.5-gimkl-2022a \n\n#Run on each hap1 and hap2 separately\ncompleasm.py run -a simplex.hap1.p_ctg.fa  -o simplex_hap1  -t 8 -l eudicots\n\ncompleasm.py run -a simplex.hap2.p_ctg.fa  -o simplex_hap2  -t 8 -l eudicots",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#purge-duplication",
+    "href": "genome_assembly.html#purge-duplication",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Purge duplication",
+    "text": "Purge duplication\nRun for each haplotype separately, Use this: https://github.com/dfguan/purge_dups\nmodule load minimap2/2.28-GCC-12.3.0\n\n#1103P_correct_hap2\ncd /1103P_corr_hap2/\nminimap2 -x lr:hq -t 8 /1103P_corrected.bp.hap2.p_ctg.fa /1103P_combined_sup_5mC_5hmC_6mA.0.9.0.8kbplus.filtered.fastq |  gzip -c - &gt; 1103P_corrected2.hap2.paf.gz\n\n/tools/purge_dups/bin/pbcstat 1103P_corrected2.hap2.paf.gz\n\n/tools/purge_dups/bin/calcuts PB.stat &gt; cutoffs 2&gt;calcults.log\n\n/tools/purge_dups/bin/split_fa 1103P_corrected.bp.hap2.p_ctg.fa &gt; 1103P_corrected_hap2.fa.split\n\nminimap2 -xasm5 -DP  1103P_corrected_hap2.fa.split  1103P_corrected_hap2.fa.split | gzip -c - &gt; 1103P_corrected_hap2.fa.split.self.paf.gz\n\n/tools/purge_dups/bin/purge_dups -2 -T cutoffs -c PB.base.cov 1103P_corrected_hap2.fa.split.self.paf.gz &gt; dups.bed 2&gt; purge_dups.log\n\n/tools/purge_dups/bin/get_seqs -e dups.bed /1103P_corrected.bp.hap2.p_ctg.fa",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#filter-with-dgenies",
+    "href": "genome_assembly.html#filter-with-dgenies",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Filter with dgenies",
+    "text": "Filter with dgenies\nAfter purged dups, QC based on quast and compleasm still look good, but no. of contigs still quite high for some of the assemblies.\nNext steps:\n\nMap the assemblies to PN40024 T2T genome assembly on dgenies (https://dgenies.toulouse.inra.fr/run)\nDownload the paf files\nFilter on excel, retain only contigs with residue matches &gt; 50kb\nsave these (the contig names) on txt file, and use this to filter the genome assembly using seqkit\nre-do QC on these filtered assemblies\n\n# Filter assembly using seqkit\n\nmodule load SeqKit/2.4.0\n\nseqkit grep -f /1103P_corr_hap1_purged_dgenies.txt /1103P_corr_hap1_purged.fa -o /purged_dup_filtered_dgenies/1103P_corr_hap1_purged_dgenies.fa",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#polish-with-nextpolish2",
+    "href": "genome_assembly.html#polish-with-nextpolish2",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Polish with NextPolish2",
+    "text": "Polish with NextPolish2\nTo increased accuracy, next step is to polish the assembly.\nWe use NextPolish2 (https://github.com/Nextomics/NextPolish2)\nSteps as follow, replace the HiFi with the filtered ONT reads (Q20), and use winnowmap.\n\n# Prepare reads (Winnowmap)\nuse these ONT reads:\n/3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz\n/1103P_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz\n\nseqkit stats -a /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz\n\n#Meryl\nmeryl count k=15 output 3309_hap1_merylDB /3309_simplex_hap1_purged_dgenies.fa\n\nmeryl count k=15 output 3309_hap2_merylDB /3309_simplex_hap2_purged_dgenies.fa\n\nmeryl print greater-than distinct=0.9998 1103P_hap1_merylDB &gt; 1103P_hap1_repetitive_k15.txt\n\nmeryl print greater-than distinct=0.9998 1103P_hap2_merylDB &gt; 1103P_hap2_repetitive_k15.txt\n\n# Winnowmap\n\nmodule load Winnowmap/2.03-GCC-11.3.0\nwinnowmap -t 5 -W 3309_hap1_repetitive_k15.txt -ax map-ont /3309_simplex_hap1_purged_dgenies.fa /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz | samtools sort -o 3309_hap1_winnowmap.map.sort.bam -\nsamtools index 3309_hap1_winnowmap.map.sort.bam\n\nwinnowmap -t 5 -W 3309_hap2_repetitive_k15.txt -ax map-ont /3309_simplex_hap2_purged_dgenies.fa /3309_combined_sup_5mC_5hmC_6mA.0.9.0.Q20.filtered.fastq.gz | samtools sort -o 3309_hap2_winnowmap.map.sort.bam -\nsamtools index 3309_hap2_winnowmap.map.sort.bam\n\n# Prepare k-mer profile (yak)\nmodule load yak/0.1\n\n#use kmer=19 as per Annabel's suggestion, as when run mercury\n#https://github.com/Nextomics/NextPolish2\n\n#Yak\ncd /nextpolish2\nyak count -o 3309_k31.yak -k 31 -b 37 &lt;(zcat /MGI_data/IB008_sample1_1.filtered.fq.gz) &lt;(zcat /IB008_sample1_2.filtered.fq.gz)\n\nyak count -o 3309_k21.yak -k 21 -b 37 &lt;(zcat /MGI_data/IB008_sample1_1.filtered.fq.gz) &lt;(zcat /IB008_sample1_2.filtered.fq.gz)\n\n##Nextpolish2\n\nmodule load NextPolish2/0.2.1-foss-2023a\n\nnextPolish2 -t 8 /3309_hap1_winnowmap.map.sort.bam /3309_simplex_hap1_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak &gt; /nextpolish2/polished/3309_simplex_hap1_repeat_polished.fa\n\nnextPolish2 -t 8 /3309_hap2_winnowmap.map.sort.bam /3309_simplex_hap2_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak &gt; /nextpolish2/polished/3309_simplex_hap2_repeat_polished.fa",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
+  },
+  {
+    "objectID": "genome_assembly.html#scaffold-with-ragtag",
+    "href": "genome_assembly.html#scaffold-with-ragtag",
+    "title": "Genome assembly of Roostock - 3309 and 1103P",
+    "section": "Scaffold with Ragtag",
+    "text": "Scaffold with Ragtag\nml Miniconda3\nsource activate /nesi/project/brins03581/env/ragtag\nREF=PN40024.T21.fa \ncd /nextpolish2/polished/\n\nfor i in *.fa\ndo\nragtag.py scaffold -o /nextpolish2/ragtag${i}_ragtag_nostringency -t 8 $REF $i\ndone\n\n\nThis uses the default stringency setting (which is -1 0.2)\nAlso tried with different stringency (0.6; 0.8; 0.9)",
+    "crumbs": [
+      "Genome Assembly of Rootstocks"
+    ]
   }
 ]
