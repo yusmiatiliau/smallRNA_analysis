@@ -27,7 +27,7 @@ done
 
 ### Long read data (ONT) basecalling
 
-```bash
+``` bash
 #Data were basecalled using the 5mC,5hmC and 6mA in all contexts in super-accurate mode
 
 SAMPLES=sample_sheet.csv
@@ -56,9 +56,7 @@ cat sample1.fastq.gz sample2.fastq.gz .. > combined.fastq.gz
 #We can apply different criteria of filtering, e.g. exclude reads with Q <10 and length < 1kb
 
 gunzip -c sample.fastq.gz | chopper --minlength 8000 --threads 16 | gzip > sample.filtered.fastq.gz
-
 ```
-
 
 ## Dorado Correct
 
@@ -70,14 +68,11 @@ module load Dorado/0.9.0
 
 dorado correct sample.filtered.fastq.gz --to-paf -t 32 -x cpu > sample.paf
 dorado correct sample.fastq.gz --from-paf sample.paf -x cuda:all -t 32 > sample_corrected.fasta
-
 ```
 
 ## Genome assembly
 
-Assembly was done using hifiasm, and run with different options:
-1. from dorado corrected reads (>8kb)
-2. from simplex non-corrected reads (include all >1kb >Q10 reads) --> using --ont argument which is available in later version of hifiasm
+Assembly was done using hifiasm, and run with different options: 1. from dorado corrected reads (\>8kb) 2. from simplex non-corrected reads (include all \>1kb \>Q10 reads) --\> using --ont argument which is available in later version of hifiasm
 
 ``` bash
 
@@ -91,7 +86,6 @@ export PATH=$PATH:/nesi/nobackup/brins03581/Cen/tools/hifiasm
 # Run hifiasm 
 
 hifiasm -t 32 --ont -o /sample_simplex_ONT --chem-c 2 sample.filtered.fastq
-
 ```
 
 ## First QC check on assembly
@@ -101,11 +95,7 @@ Perform QC on each assembly separately:
 - simplex (3309 hap1 and hap2; 1103P hap1 and hap2)
 - corrected (3309 hap1 and hap2; 1103P hap1 and hap2)
 
-QCs:
-Quast: for contiguity (no. of contigs, N50, total length among others)
-compleasm: for completeness (BUSCO genes, missing genes)
-Dgenies for comparison with other assemblies (e.g. PN40024 T2T)
-Mercury: for accuracy (QV, also completeness)
+QCs: Quast: for contiguity (no. of contigs, N50, total length among others) compleasm: for completeness (BUSCO genes, missing genes) Dgenies for comparison with other assemblies (e.g. PN40024 T2T) Mercury: for accuracy (QV, also completeness)
 
 ``` bash
 
@@ -123,13 +113,11 @@ module load compleasm/0.2.5-gimkl-2022a 
 compleasm.py run -a simplex.hap1.p_ctg.fa  -o simplex_hap1  -t 8 -l eudicots
 
 compleasm.py run -a simplex.hap2.p_ctg.fa  -o simplex_hap2  -t 8 -l eudicots
-
 ```
 
 ## Purge duplication
 
-Run for each haplotype separately,
-Use this: https://github.com/dfguan/purge_dups
+Run for each haplotype separately, Use this: https://github.com/dfguan/purge_dups
 
 ``` bash
 module load minimap2/2.28-GCC-12.3.0
@@ -149,7 +137,6 @@ minimap2 -xasm5 -DP  1103P_corrected_hap2.fa.split  1103P_corrected_hap2.fa.sp
 /tools/purge_dups/bin/purge_dups -2 -T cutoffs -c PB.base.cov 1103P_corrected_hap2.fa.split.self.paf.gz > dups.bed 2> purge_dups.log
 
 /tools/purge_dups/bin/get_seqs -e dups.bed /1103P_corrected.bp.hap2.p_ctg.fa
-
 ```
 
 ## Filter with dgenies
@@ -160,7 +147,7 @@ Next steps:
 
 - Map the assemblies to PN40024 T2T genome assembly on dgenies (https://dgenies.toulouse.inra.fr/run)
 - Download the paf files
-- Filter on excel, retain only contigs with residue matches > 50kb
+- Filter on excel, retain only contigs with residue matches \> 50kb
 - save these (the contig names) on txt file, and use this to filter the genome assembly using seqkit
 - re-do QC on these filtered assemblies
 
@@ -170,7 +157,6 @@ Next steps:
 module load SeqKit/2.4.0
 
 seqkit grep -f /1103P_corr_hap1_purged_dgenies.txt /1103P_corr_hap1_purged.fa -o /purged_dup_filtered_dgenies/1103P_corr_hap1_purged_dgenies.fa
-
 ```
 
 ## Polish with NextPolish2
@@ -180,7 +166,6 @@ To increased accuracy, next step is to polish the assembly.
 We use NextPolish2 (https://github.com/Nextomics/NextPolish2)
 
 Steps as follow, replace the HiFi with the filtered ONT reads (Q20), and use winnowmap.
-
 
 ``` bash
 
@@ -228,9 +213,7 @@ module load NextPolish2/0.2.1-foss-2023a
 nextPolish2 -t 8 /3309_hap1_winnowmap.map.sort.bam /3309_simplex_hap1_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak > /nextpolish2/polished/3309_simplex_hap1_repeat_polished.fa
 
 nextPolish2 -t 8 /3309_hap2_winnowmap.map.sort.bam /3309_simplex_hap2_purged_dgenies.fa /nextpolish2/yak_repeat/3309_k21.yak /nextpolish2/yak_repeat/3309_k21.yak > /nextpolish2/polished/3309_simplex_hap2_repeat_polished.fa
-
 ```
-
 
 ## Scaffold with Ragtag
 
@@ -248,6 +231,77 @@ done
 
 This uses the default stringency setting (which is -1 0.2)
 Also tried with different stringency (0.6; 0.8; 0.9)
-
 ```
 
+## Syntheny Plot
+
+``` bash
+# use syri and plotsr
+
+#some of the rootstock assembly chrs are in different orientation, so first, #Change orientation of the rootstock genome first for some chr inv=" chr01 chr05 chr06 chr10 chr13 chr14 chr15 " samtools faidx 3309.chr.fasta for c in $(cut -f1 3309.chr.fasta.fai); do
+  if [[ "$inv" == *"* $c "* ]]; then
+    samtools faidx -i 3309.chr.fasta "$c" \| sed "s/\^\>./\>$c/"
+  else
+    samtools faidx 3309.chr.fasta "$c" fi done \> 3309.chr.fwd.fasta samtools faidx 3309.chr.fwd.fasta
+
+minimap2 -ax asm20 --eqx -t 16 SB.chr.fasta 3309.chr.fwd.fasta \| samtools sort [-@8] -o SB_3309.fwd.bam samtools index SB_3309.fwd.asm20.bam syri -c SB_3309.fwd.asm20.bam -r SB.chr.fasta -q 3309.chr.fwd.fasta -F B --prefix SB_3309. --nc 8 cat SB_3309.syri.summary
+
+minimap2 -ax asm20 --eqx -t 16 1103P.fwd.fasta SB.chr.fasta \| samtools sort [-@8] -o 1103P_SB.fwd.asm20.bam samtools index 1103P_SB.fwd.asm20.bam syri -c 1103P_SB.fwd.asm20.bam -q SB.chr.fasta -r 1103P.fwd.fasta -F B --prefix 1103P_SB. --nc 8
+
+plotsr\
+--sr 1103P_SB.syri.out\
+--sr SB_3309.syri.out\
+--genomes genome_three.txt\
+-v -H 10 -W 30\
+-o 1103P_SB_3309C_allvertical.pdf
+
+#genome_three.txt is text file with this content: #file name tags /home/cenliau/00_nesi_projects/brins03581_nobackup/Cen/PB054_smallRNA/plot_jcvi_plotsr/1103P.fwd.fasta 1103P lw:1.5 /home/cenliau/00_nesi_projects/brins03581_nobackup/Cen/PB054_smallRNA/plot_jcvi_plotsr/SB.chr.fasta SB lw:1.5 /home/cenliau/00_nesi_projects/brins03581_nobackup/Cen/PB054_smallRNA/plot_jcvi_plotsr/3309.chr.fwd.fasta 3309C lw:1.5
+```
+
+``` bash
+# plot syntheny of gene region using jcvi
+
+python -m jcvi.formats.gff load 3309.gff3 3309.fasta --parents=mRNA --children=CDS --id_attribute=ID -o 3309.cds.fa
+
+python -m jcvi.formats.gff load 1103P.gff3 1103P.fasta --parents=mRNA --children=CDS --id_attribute=ID -o /1103P.cds.fa
+
+python -m jcvi.formats.gff load SB.gff3 SB.fasta --parents=mRNA --children=CDS --id_attribute=ID -o /SB.cds.fa
+
+A=3309   # top
+B=SB   # middle (compared to both)
+C=1103P   # bottom
+# Inputs per genome: ${X}.gff3 and ${X}.cds.fa (CDS nucleotide FASTA)
+# Feature type/key in GFF whose IDs match the CDS FASTA headers:
+TYPE=mRNA
+KEY=Name
+
+python -m jcvi.compara.catalog ortholog $A $B --no_strip_names --cscore=.99
+python -m jcvi.compara.catalog ortholog $B $C --no_strip_names --cscore=.99
+
+python -m jcvi.compara.synteny screen --minspan=30 --simple 3309.SB.anchors  3309.SB.anchors.new
+python -m jcvi.compara.synteny screen --minspan=30 --simple SB.1103P.anchors SB.1103P.anchors.new
+
+for g in 3309 SB 1103P; do
+  cut -f1 ${g}.bed | sort -uV | grep -E 'chr[0-9]+' | grep -viE 'chloro|mito' | paste -sd, -
+done > seqids
+cat seqids
+
+cat > layout <<'EOF'
+# y, xstart, xend, rotation, color, label, va, bed
+ .80,   .15,   .95,   0,  #8da0cb, 3309C,           top,    3309.bed
+ .50,   .15,   .95,   0,  #66c2a5, Sauvignon blanc, top,    SB.bed
+ .20,   .15,   .95,   0,  #fc8d62, 1103P,           bottom, 1103P.bed
+# edges
+e, 0, 1, 3309.SB.anchors.simple
+e, 1, 2, SB.1103P.anchors.simple
+EOF
+
+#Some chr are assemblied in different orientation (seems like inversion). to map them in the same orientation, adding - to the end of a chromosome name draws that chromosome reversed. Edit the 3309 line in seqids:
+
+chr01-,chr02,chr03,chr04,chr05-,chr06-,chr07,chr08,chr09,chr10-,chr11,chr12,chr13-,chr14-,chr15-,chr16,chr17,chr18,chr19
+
+#rename the new seqids as seqids_fwd
+
+python -m jcvi.graphics.karyotype seqids_fwd layout \
+  --keep-chrlabels --basepair --figsize=12x6 --format=pdf -o karyotype_inverse.pdf
+```
